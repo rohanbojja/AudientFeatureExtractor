@@ -270,6 +270,7 @@ namespace AudientFeatureExtractor.ViewModel
                 int processedFiles = 0;
                 foreach (var file in files)
                 {
+                    MiniProg = processedFiles * 100 / files.Length;
                     var tmp = new FileInfo(file).Name;
                     Genre = f_name.ToUpperInvariant() + $" {tmp}";
                     var file_name = tmp.Substring(0, tmp.Length - 3) + "jpg";
