@@ -14,6 +14,8 @@ using NWaves.Signals;
 using NWaves.Transforms;
 using NWaves.Windows;
 using System.Windows.Input;
+using System.Diagnostics;
+using System.Drawing;
 
 namespace AudientFeatureExtractor.ViewModel
 {
@@ -23,10 +25,23 @@ namespace AudientFeatureExtractor.ViewModel
         public MainWindowViewModel()
         {
             Genre = "GENRE";
+            OutputFolder = "Spectrograms";
+            DatasetName = "Dataset";
+            SpecBool = true;
             Extract = new AsyncCommand(extractFeatures2);
         }
 
+        public void startRecording()
+        {
 
+        }
+
+        public bool specBool;
+        public bool SpecBool
+        {
+            get { return specBool; }
+            set { SetProperty(ref specBool, value); }
+        }
         public string Genre
         {
             get { return genre; }
@@ -35,8 +50,14 @@ namespace AudientFeatureExtractor.ViewModel
                 SetProperty(ref genre, value);
             }
         }
+        public string outputFolder = String.Empty;
+        public string OutputFolder
+        {
+            set { SetProperty(ref outputFolder, value); }
+            get { return outputFolder; }
+        }
 
-        public string datasetName="Dataset";
+        public string datasetName = String.Empty;
         public string DatasetName
         {
             set { SetProperty(ref datasetName, value); }
@@ -67,10 +88,17 @@ namespace AudientFeatureExtractor.ViewModel
             IsBusy = true;
             Genre = "Let's go!";
             Prog = 1;
-            await Task.Run(() => extractFeatures());
+            if (specBool)
+            {
+                await Task.Run(() => extractFeatures_spec());
+            }
+            else
+            {
+                await Task.Run(() => extractFeatures());
+            }
             //Write non-blocking code here.
         }
-        public Task extractFeatures()
+        public async Task<int> extractFeatures()
         {
             IsBusy = true;
             DiscreteSignal signal;
@@ -97,7 +125,7 @@ namespace AudientFeatureExtractor.ViewModel
             var tdExtractor = new TimeDomainFeaturesExtractor(opts);
             var mfccExtractor = new MfccExtractor(mfccOptions);
 
-            var folders = Directory.GetDirectories(Path.Combine(Environment.CurrentDirectory, datasetName));
+            var folders = Directory.GetDirectories(Path.Combine(Environment.CurrentDirectory, DatasetName));
             totalGenres = folders.Length;
             finishedGenres = 1;
             using (var writer = File.CreateText(Path.Combine(Environment.CurrentDirectory, "Data.csv")))
@@ -115,12 +143,14 @@ namespace AudientFeatureExtractor.ViewModel
                     var f_name = new DirectoryInfo(folder).Name;
                     Genre = f_name.ToUpperInvariant();
                     Prog = finishedGenres * 100 / totalGenres;
-                    var files = Directory.GetFiles(Path.Combine(Environment.CurrentDirectory, datasetName, folder));
+                    var files = Directory.GetFiles(Path.Combine(Environment.CurrentDirectory, DatasetName, folder));
                     //Write the genre label here
                     Console.WriteLine($"{f_name}");
                     int processedFiles = 0;
                     foreach (var filename in files)
                     {
+                        var tmp = new FileInfo(filename).Name;
+                        Genre = f_name.ToUpperInvariant() + $" {tmp}";
                         MiniProg = processedFiles*100/ files.Length;
                         feature_string = String.Empty;
                         feature_string = $"{f_name},";
@@ -144,9 +174,9 @@ namespace AudientFeatureExtractor.ViewModel
                         {
                             avg_vec_spect.Add(0f);
                         }
-
+                        Debug.WriteLine($"{filename}");
                         string specFeatures = String.Empty;
-                        using (var stream = new FileStream(Path.Combine(Environment.CurrentDirectory, datasetName, filename), FileMode.Open))
+                        using (var stream = new FileStream(Path.Combine(Environment.CurrentDirectory, DatasetName, filename), FileMode.Open))
                         {
                             var waveFile = new WaveFile(stream);
                             signal = waveFile[Channels.Average];
@@ -216,9 +246,46 @@ namespace AudientFeatureExtractor.ViewModel
                     finishedGenres += 1;
                 }
             }
-            return null;
+            return 0;
         }
 
         public IAsyncCommand Extract { get; private set; }
+
+        public IAsyncCommand recordWave { get; }
+
+        public async Task<int> extractFeatures_spec()
+        {
+            Directory.CreateDirectory(OutputFolder);
+            Debug.WriteLine("Extracting spectrograms.");
+            var folders = Directory.GetDirectories(Path.Combine(Environment.CurrentDirectory, DatasetName));
+            totalGenres = folders.Length;
+            finishedGenres = 1;
+            foreach (var folder in folders)
+            {
+                var f_name = new DirectoryInfo(folder).Name;
+                Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory,OutputFolder,f_name));
+                Genre = f_name.ToUpperInvariant();
+                Prog = finishedGenres * 100 / totalGenres;
+                var files = Directory.GetFiles(Path.Combine(Environment.CurrentDirectory, DatasetName, folder));
+                int processedFiles = 0;
+                foreach (var file in files)
+                {
+                    var tmp = new FileInfo(file).Name;
+                    Genre = f_name.ToUpperInvariant() + $" {tmp}";
+                    var file_name = tmp.Substring(0, tmp.Length - 3) + "jpg";
+                    Debug.WriteLine(Path.Combine(Environment.CurrentDirectory, DatasetName, folder, file));
+                    var spec = new Spectrogram.Spectrogram(sampleRate: 8000, fftSize: 2048, step: 700);
+                    float[] values = Spectrogram.Tools.ReadWav(Path.Combine(Environment.CurrentDirectory, DatasetName, folder, file));
+                    spec.AddExtend(values);
+                    // convert FFT to an image and save it
+                    Bitmap bmp = spec.GetBitmap(intensity: 2, freqHigh: 2500);
+                    spec.SaveBitmap(bmp, Path.Combine(Environment.CurrentDirectory, OutputFolder, f_name, file_name));
+                    processedFiles += 1;
+                    Debug.WriteLine($"{OutputFolder} OP: {Path.Combine(Environment.CurrentDirectory, OutputFolder, f_name, file_name)}");
+                }
+                finishedGenres += 1;
+            }
+            return 0;
+        }
     }
 }
