@@ -16,6 +16,7 @@ using NWaves.Windows;
 using System.Windows.Input;
 using System.Diagnostics;
 using System.Drawing;
+using MathNet.Numerics.Statistics;
 
 namespace AudientFeatureExtractor.ViewModel
 {
@@ -132,11 +133,35 @@ namespace AudientFeatureExtractor.ViewModel
             {
                 //Write header
                 var main_header = "genre,";
-                main_header += String.Join(",", mfccExtractor.FeatureDescriptions);
-                main_header += ",";
-                main_header += String.Join(",", tdExtractor.FeatureDescriptions);
+                var preheader = String.Empty;
+                foreach(string m in mfccExtractor.FeatureDescriptions)
+                {
+                    preheader += m + "_mean,";
+                    preheader += m + "_min,";
+                    preheader += m + "_var,";
+                    preheader += m + "_sd,";
+                    preheader += m + "_med,";
+                    preheader += m + "_lq,";
+                    preheader += m + "_uq,";
+                    preheader += m + "_skew,";
+                    preheader += m + "_kurt,";
+                }
+                foreach (string m in tdExtractor.FeatureDescriptions)
+                {
+                    preheader += m + "_mean,";
+                    preheader += m + "_min,";
+                    preheader += m + "_var,";
+                    preheader += m + "_sd,";
+                    preheader += m + "_med,";
+                    preheader += m + "_lq,";
+                    preheader += m + "_uq,";
+                    preheader += m + "_skew,";
+                    preheader += m + "_kurt,";
+                }
+                main_header += String.Join(",", preheader);
                 main_header += ",centroid,spread,flatness,noiseness,roloff,crest,decrease,spectral_entropy";
                 writer.WriteLine(main_header);
+                Debug.WriteLine(main_header);
                 string feature_string = String.Empty;
                 foreach (var folder in folders)
                 {
@@ -154,26 +179,21 @@ namespace AudientFeatureExtractor.ViewModel
                         MiniProg = processedFiles*100/ files.Length;
                         feature_string = String.Empty;
                         feature_string = $"{f_name},";
-                        //MFCC
-                        var avg_vec_mfcc = new List<float>(mfcc_no + 1);
-                        //TD Features
-                        var avg_vec_td = new List<float>(4);
-                        //Spectral features
-                        var avg_vec_spect = new List<float>(10);
 
+                        var mfccList = new List<List<double>>();
+                        var tdList = new List<List<double>>();
+                        //MFCC
+                        //TD Features
+                        //Spectral features
                         for (var i = 0; i < mfcc_no; i++)
                         {
-                            avg_vec_mfcc.Add(0f);
+                            mfccList.Add(new List<double>());
                         }
                         for (var i = 0; i < 4; i++)
                         {
-                            avg_vec_td.Add(0f);
+                            tdList.Add(new List<double>());
                         }
 
-                        for (var i = 0; i < 10; i++)
-                        {
-                            avg_vec_spect.Add(0f);
-                        }
                         Debug.WriteLine($"{filename}");
                         string specFeatures = String.Empty;
                         using (var stream = new FileStream(Path.Combine(Environment.CurrentDirectory, DatasetName, filename), FileMode.Open))
@@ -183,11 +203,13 @@ namespace AudientFeatureExtractor.ViewModel
                             //Compute MFCC
                             tdVectors = tdExtractor.ComputeFrom(signal);
                             mfccVectors = mfccExtractor.ComputeFrom(signal);
-                            var fftSize = 1024;
+                            var fftSize = 2048;
                             var fft = new Fft(fftSize);
                             var resolution = (float)samplingRate / fftSize;
 
-                            var frequencies = Enumerable.Range(0, fftSize / 2 + 1)
+                            //var frequencies = new float[] { 300, 500, 800, 1200, 1600, 1800, 2500, 5000/*Hz*/ };
+
+                            var frequencies = Enumerable.Range(300, fftSize / 2 + 1)
                                                         .Select(f => f * resolution)
                                                         .ToArray();
 
@@ -204,37 +226,66 @@ namespace AudientFeatureExtractor.ViewModel
                             specFeatures = $"{centroid},{spread},{flatness},{noiseness},{rolloff},{crest},{decrease},{entropy}";
                         }
 
+                        
+
                         foreach (var inst in mfccVectors)
                         {
                             for (var i = 0; i < mfcc_no; i++)
                             {
-                                avg_vec_mfcc[i] += inst[i];
+                                mfccList[i].Add(inst[i]);
                             }
                         }
 
+                        Statistics.Mean(mfccList[1]);
                         foreach (var inst in tdVectors)
                         {
                             for (var i = 0; i < 4; i++)
                             {
-                                avg_vec_td[i] += inst[i];
+                                tdList[i].Add(inst[i]);
                             }
                         }
 
+                        var mfcc_statistics = new List<double>();
                         for (var i = 0; i < mfcc_no; i++)
                         {
-                            avg_vec_mfcc[i] /= mfccVectors.Count;
+                            //preheader += m + "_mean";
+                            //preheader += m + "_min";
+                            //preheader += m + "_var";
+                            //preheader += m + "_sd";
+                            //preheader += m + "_med";
+                            //preheader += m + "_lq";
+                            //preheader += m + "_uq";
+                            //preheader += m + "_skew";
+                            //preheader += m + "_kurt";
+                            mfcc_statistics.Add(Statistics.Mean(mfccList[i]));
+                            mfcc_statistics.Add(Statistics.Minimum(mfccList[i]));
+                            mfcc_statistics.Add(Statistics.Variance(mfccList[i]));
+                            mfcc_statistics.Add(Statistics.StandardDeviation(mfccList[i]));
+                            mfcc_statistics.Add(Statistics.Median(mfccList[i]));
+                            mfcc_statistics.Add(Statistics.LowerQuartile(mfccList[i]));
+                            mfcc_statistics.Add(Statistics.UpperQuartile(mfccList[i]));
+                            mfcc_statistics.Add(Statistics.Skewness(mfccList[i]));
+                            mfcc_statistics.Add(Statistics.Kurtosis(mfccList[i]));
                         }
+                        var td_statistics = new List<double>();
 
-                        for (var i = 0; i < 4; i++)
+                        for( var i=0; i<4; i++)
                         {
-                            avg_vec_td[i] /= tdVectors.Count;
+                            td_statistics.Add(Statistics.Mean(tdList[i]));
+                            td_statistics.Add(Statistics.Minimum(tdList[i]));
+                            td_statistics.Add(Statistics.Variance(tdList[i]));
+                            td_statistics.Add(Statistics.StandardDeviation(tdList[i]));
+                            td_statistics.Add(Statistics.Median(tdList[i]));
+                            td_statistics.Add(Statistics.LowerQuartile(tdList[i]));
+                            td_statistics.Add(Statistics.UpperQuartile(tdList[i]));
+                            td_statistics.Add(Statistics.Skewness(tdList[i]));
+                            td_statistics.Add(Statistics.Kurtosis(tdList[i]));
                         }
-
 
                         // Write MFCCs
-                        feature_string += String.Join(",", avg_vec_mfcc);
+                        feature_string += String.Join(",", mfcc_statistics);
                         feature_string += ",";
-                        feature_string += String.Join(",", avg_vec_td);
+                        feature_string += String.Join(",", td_statistics);
                         //Write Spectral features as well
                         feature_string += ",";
                         feature_string += specFeatures;
@@ -275,11 +326,11 @@ namespace AudientFeatureExtractor.ViewModel
                     Genre = f_name.ToUpperInvariant() + $" {tmp}";
                     var file_name = tmp.Substring(0, tmp.Length - 3) + "jpg";
                     Debug.WriteLine(Path.Combine(Environment.CurrentDirectory, DatasetName, folder, file));
-                    var spec = new Spectrogram.Spectrogram(sampleRate: 8000, fftSize: 2048, step: 700);
+                    var spec = new Spectrogram.Spectrogram(sampleRate: 22000, fftSize: 2048, step: 700);
                     float[] values = Spectrogram.Tools.ReadWav(Path.Combine(Environment.CurrentDirectory, DatasetName, folder, file));
                     spec.AddExtend(values);
                     // convert FFT to an image and save it
-                    Bitmap bmp = spec.GetBitmap(intensity: 2, freqHigh: 2500);
+                    Bitmap bmp = spec.GetBitmap(intensity: 2, freqHigh: 8000);
                     spec.SaveBitmap(bmp, Path.Combine(Environment.CurrentDirectory, OutputFolder, f_name, file_name));
                     processedFiles += 1;
                     Debug.WriteLine($"{OutputFolder} OP: {Path.Combine(Environment.CurrentDirectory, OutputFolder, f_name, file_name)}");

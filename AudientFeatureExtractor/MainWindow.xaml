@@ -6,21 +6,27 @@
         xmlns:local="clr-namespace:AudientFeatureExtractor"
         xmlns:vm="clr-namespace:AudientFeatureExtractor.ViewModel"
         mc:Ignorable="d"
-        Title="MainWindow" Height="320" Width="800">
+        Title="Audient Feature Extractor" Height="320" Width="800">
     <Window.DataContext>
         <vm:MainWindowViewModel></vm:MainWindowViewModel>
     </Window.DataContext>
 
     <Grid>
-        <ProgressBar HorizontalAlignment="Center" Height="33" VerticalAlignment="Top" Width="692" Value="{Binding Prog}" Maximum="100" Margin="0,128,0,0"/>
-        <TextBox IsEnabled="{Binding IsNotBusy}" HorizontalAlignment="Center" Margin="0,179,0,0" Text="{Binding DatasetName}" TextWrapping="Wrap" VerticalAlignment="Top" Width="120"/>
-        <Button IsEnabled="{Binding IsNotBusy}" Content="Extract!" Command="{Binding Extract}" HorizontalAlignment="Center" Margin="0,216,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.083,0.382" Width="174" Height="38" />
-        <Label Content="{Binding Genre}" HorizontalAlignment="Center" Margin="0,32,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.517,-0.762" FontSize="24"/>
-        <ProgressBar HorizontalAlignment="Center" Height="33" Margin="0,90,0,0" VerticalAlignment="Top" Value="{Binding MiniProg}" Maximum="100" Width="692"/>
-        <Button Content="Record!" HorizontalAlignment="Left" Margin="674,201,0,0" VerticalAlignment="Top"/>
-        <Button Content="Analyse!" HorizontalAlignment="Left" Margin="674,243,0,0" VerticalAlignment="Top"/>
-        <CheckBox Content="Spectograms?" IsChecked="{Binding SpecBool}" HorizontalAlignment="Left" Margin="54,227,0,0" VerticalAlignment="Top"/>
-        <TextBox HorizontalAlignment="Left" Margin="54,201,0,0" Text="{Binding OutputFolder}" TextWrapping="Wrap" VerticalAlignment="Top" Width="120"/>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="34*"/>
+            <ColumnDefinition Width="19*"/>
+            <ColumnDefinition Width="56*"/>
+            <ColumnDefinition Width="691*"/>
+        </Grid.ColumnDefinitions>
+        <ProgressBar HorizontalAlignment="Left" Height="33" VerticalAlignment="Top" Width="692" Value="{Binding Prog}" Maximum="100" Margin="1,128,0,0" Grid.Column="2" Grid.ColumnSpan="2"/>
+        <TextBox IsEnabled="{Binding IsNotBusy}" HorizontalAlignment="Left" Margin="231,179,0,0" Text="{Binding DatasetName}" TextWrapping="Wrap" VerticalAlignment="Top" Width="120" Grid.Column="3"/>
+        <Button IsEnabled="{Binding IsNotBusy}" Content="Extract!" Command="{Binding Extract}" HorizontalAlignment="Left" Margin="204,216,0,0" VerticalAlignment="Top" RenderTransformOrigin="1.083,0.382" Width="174" Height="38" Grid.Column="3" />
+        <Label Content="{Binding Genre}" HorizontalAlignment="Left" Margin="249,32,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.517,-0.762" FontSize="24" Grid.Column="3"/>
+        <ProgressBar HorizontalAlignment="Left" Height="33" Margin="1,90,0,0" VerticalAlignment="Top" Value="{Binding MiniProg}" Maximum="100" Width="692" Grid.Column="2" Grid.ColumnSpan="2"/>
+        <Button Content="Record!" HorizontalAlignment="Left" Margin="565,201,0,0" VerticalAlignment="Top" Grid.Column="3"/>
+        <Button Content="Analyse!" HorizontalAlignment="Left" Margin="565,243,0,0" VerticalAlignment="Top" Grid.Column="3"/>
+        <CheckBox Content="Spectograms?" IsChecked="{Binding SpecBool}" HorizontalAlignment="Left" Margin="1,227,0,0" VerticalAlignment="Top" Grid.Column="2" Grid.ColumnSpan="2"/>
+        <TextBox HorizontalAlignment="Left" Margin="1,201,0,0" Text="{Binding OutputFolder}" TextWrapping="Wrap" VerticalAlignment="Top" Width="120" Grid.Column="2" Grid.ColumnSpan="2"/>
 
     </Grid>
 </Window>
